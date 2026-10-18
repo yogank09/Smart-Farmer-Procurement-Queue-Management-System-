@@ -2,13 +2,11 @@ package com.farmerprocurement.backend.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 
 public class LoginRequest {
 
 @NotBlank(message = "Email is required")
-@Email(message = "Please provide a valid email address")
-@Size(max = 150, message = "Email must not exceed 150 characters")
+@Email(message = "Please provide a valid email")
 private String email;
 
 @NotBlank(message = "Password is required")

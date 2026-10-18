@@ -1,39 +1,91 @@
 package com.farmerprocurement.backend.config;
 
+import com.farmerprocurement.backend.security.JwtAuthenticationFilter;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 public class SecurityConfig {
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(
-            HttpSecurity http) throws Exception {
+@Bean
+public PasswordEncoder passwordEncoder() {
+    return new BCryptPasswordEncoder();
+}
 
-        http
-            .csrf(csrf -> csrf.disable())
-            .sessionManagement(session -> session
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-           .authorizeHttpRequests(auth -> auth
-    .requestMatchers("/").permitAll()
-    .requestMatchers("/api/auth/register").permitAll()
-    .requestMatchers("/api/auth/login").permitAll()
-     .requestMatchers("/api/test/email").permitAll()
-    .anyRequest().authenticated()
-)
-            .formLogin(form -> form.disable())
-            .httpBasic(basic -> basic.disable());
+@Bean
+public DaoAuthenticationProvider authenticationProvider(
+        UserDetailsService userDetailsService,
+        PasswordEncoder passwordEncoder) {
 
-        return http.build();
-    }
+    DaoAuthenticationProvider provider =
+            new DaoAuthenticationProvider(userDetailsService);
+
+    provider.setPasswordEncoder(passwordEncoder);
+
+    return provider;
+}
+
+@Bean
+public AuthenticationManager authenticationManager(
+        AuthenticationConfiguration configuration)
+        throws Exception {
+
+    return configuration.getAuthenticationManager();
+}
+
+@Bean
+public SecurityFilterChain securityFilterChain(
+        HttpSecurity http,
+        DaoAuthenticationProvider authenticationProvider,
+        JwtAuthenticationFilter jwtAuthenticationFilter)
+        throws Exception {
+
+    http
+        .csrf(csrf -> csrf.disable())
+
+        .sessionManagement(session -> session
+            .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
+        .authenticationProvider(authenticationProvider)
+
+        .authorizeHttpRequests(auth -> auth
+            .requestMatchers(HttpMethod.POST,
+                "/api/auth/register",
+                "/api/auth/verify-email",
+                "/api/auth/login")
+            .permitAll()
+
+            .requestMatchers("/", "/error")
+            .permitAll()
+
+            .anyRequest()
+            .authenticated()
+        )
+
+        .formLogin(form -> form.disable())
+        .httpBasic(basic -> basic.disable())
+
+        .addFilterBefore(
+            jwtAuthenticationFilter,
+            UsernamePasswordAuthenticationFilter.class
+        );
+
+    return http.build();
+}
+
+
 }
