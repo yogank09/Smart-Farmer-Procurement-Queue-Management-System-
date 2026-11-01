@@ -20,72 +20,88 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 public class SecurityConfig {
 
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
 
-@Bean
-public PasswordEncoder passwordEncoder() {
-    return new BCryptPasswordEncoder();
-}
+    @Bean
+    public DaoAuthenticationProvider authenticationProvider(
+            UserDetailsService userDetailsService,
+            PasswordEncoder passwordEncoder) {
 
-@Bean
-public DaoAuthenticationProvider authenticationProvider(
-        UserDetailsService userDetailsService,
-        PasswordEncoder passwordEncoder) {
+        DaoAuthenticationProvider provider =
+                new DaoAuthenticationProvider(userDetailsService);
 
-    DaoAuthenticationProvider provider =
-            new DaoAuthenticationProvider(userDetailsService);
+        provider.setPasswordEncoder(passwordEncoder);
 
-    provider.setPasswordEncoder(passwordEncoder);
+        return provider;
+    }
 
-    return provider;
-}
+    @Bean
+    public AuthenticationManager authenticationManager(
+            AuthenticationConfiguration configuration)
+            throws Exception {
 
-@Bean
-public AuthenticationManager authenticationManager(
-        AuthenticationConfiguration configuration)
-        throws Exception {
+        return configuration.getAuthenticationManager();
+    }
 
-    return configuration.getAuthenticationManager();
-}
+    @Bean
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http,
+            DaoAuthenticationProvider authenticationProvider,
+            JwtAuthenticationFilter jwtAuthenticationFilter)
+            throws Exception {
 
-@Bean
-public SecurityFilterChain securityFilterChain(
-        HttpSecurity http,
-        DaoAuthenticationProvider authenticationProvider,
-        JwtAuthenticationFilter jwtAuthenticationFilter)
-        throws Exception {
+        http
+            .csrf(csrf -> csrf.disable())
 
-    http
-        .csrf(csrf -> csrf.disable())
+            .sessionManagement(session -> session
+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-        .sessionManagement(session -> session
-            .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authenticationProvider(authenticationProvider)
 
-        .authenticationProvider(authenticationProvider)
+            .authorizeHttpRequests(auth -> auth
 
-        .authorizeHttpRequests(auth -> auth
-            .requestMatchers(HttpMethod.POST,
-                "/api/auth/register",
-                "/api/auth/verify-email",
-                "/api/auth/login")
-            .permitAll()
+                // Public authentication APIs
+                .requestMatchers(HttpMethod.POST,
+                    "/api/auth/register",
+                    "/api/auth/verify-email",
+                    "/api/auth/login")
+                .permitAll()
 
-            .requestMatchers("/", "/error")
-            .permitAll()
+                .requestMatchers("/", "/error")
+                .permitAll()
 
-            .anyRequest()
-            .authenticated()
-        )
+                // View and search procurement centers
+                .requestMatchers(HttpMethod.GET, "/api/centers/**")
+                .hasAnyRole("FARMER", "CENTER_OPERATOR", "ADMIN")
 
-        .formLogin(form -> form.disable())
-        .httpBasic(basic -> basic.disable())
+                // Create procurement centers
+                .requestMatchers(HttpMethod.POST, "/api/centers/**")
+                .hasRole("ADMIN")
 
-        .addFilterBefore(
-            jwtAuthenticationFilter,
-            UsernamePasswordAuthenticationFilter.class
-        );
+                // Update procurement centers
+                .requestMatchers(HttpMethod.PUT, "/api/centers/**")
+                .hasRole("ADMIN")
 
-    return http.build();
-}
+                // Activate/deactivate procurement centers
+                .requestMatchers(HttpMethod.PATCH, "/api/centers/**")
+                .hasRole("ADMIN")
 
+                // All other APIs require authentication
+                .anyRequest()
+                .authenticated()
+            )
 
+            .formLogin(form -> form.disable())
+            .httpBasic(basic -> basic.disable())
+
+            .addFilterBefore(
+                jwtAuthenticationFilter,
+                UsernamePasswordAuthenticationFilter.class
+            );
+
+        return http.build();
+    }
 }

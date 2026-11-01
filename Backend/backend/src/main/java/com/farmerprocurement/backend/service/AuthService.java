@@ -141,14 +141,14 @@ public RegisterResponse register(RegisterRequest request) {
             saved.getEmail());
 }
 
-// STEP 2: Verify the email OTP.
+// STEP 2: Verify email OTP and create the permanent user.
 @Transactional
 public String verifyEmailOtp(String email, String otp) {
 
-    // Normalize the email.
+    // Normalize email.
     email = email.trim().toLowerCase(Locale.ROOT);
 
-    // Find the pending registration.
+    // Find pending registration.
     PendingRegistration pending =
             pendingRegistrationRepository.findByEmail(email)
                     .orElseThrow(() -> new ResponseStatusException(
@@ -157,7 +157,7 @@ public String verifyEmailOtp(String email, String otp) {
 
     LocalDateTime now = LocalDateTime.now();
 
-    // Check whether the entire registration has expired.
+    // Check registration expiry.
     if (pending.getExpiresAt() == null
             || !pending.getExpiresAt().isAfter(now)) {
 
@@ -168,29 +168,31 @@ public String verifyEmailOtp(String email, String otp) {
                 "Registration expired. Please register again.");
     }
 
-    // Avoid re-verifying an already verified email.
+    // Prevent duplicate user creation.
     if (pending.isEmailVerified()) {
-        return "Email is already verified.";
+        throw new ResponseStatusException(
+                HttpStatus.CONFLICT,
+                "Email is already verified.");
     }
 
-    // Check OTP availability and expiry.
+    // Check OTP expiry.
     if (pending.getEmailOtpHash() == null
             || pending.getEmailOtpExpiresAt() == null
             || !pending.getEmailOtpExpiresAt().isAfter(now)) {
 
         throw new ResponseStatusException(
                 HttpStatus.GONE,
-                "OTP expired. Please request a new OTP.");
+                "OTP expired. Please register again.");
     }
 
-    // Limit incorrect attempts.
+    // Check maximum incorrect attempts.
     if (pending.getFailedAttempts() >= 5) {
         throw new ResponseStatusException(
                 HttpStatus.TOO_MANY_REQUESTS,
                 "Too many incorrect attempts. Please register again.");
     }
 
-    // Compare the submitted OTP with the stored hash.
+    // Verify OTP.
     if (!emailOtpService.verifyOtp(
             otp,
             pending.getEmailOtpHash())) {
@@ -209,16 +211,30 @@ public String verifyEmailOtp(String email, String otp) {
                 "Incorrect OTP. Attempts remaining: " + (5 - attempts));
     }
 
-    // Mark the email as verified.
-    pending.setEmailVerified(true);
+    // Create permanent user.
+    User user = new User();
 
-    // Remove the used OTP hash and expiry.
-    pending.setEmailOtpHash(null);
-    pending.setEmailOtpExpiresAt(null);
+    user.setFullName(pending.getFullName());
+    user.setEmail(pending.getEmail());
+    user.setPhoneNumber(pending.getPhoneNumber());
 
-    pendingRegistrationRepository.save(pending);
+    // Password is already BCrypt-hashed in pending registration.
+    user.setPassword(pending.getPasswordHash());
 
-    return "Email verified successfully. Phone verification is still required.";
+    // Set default role.
+    user.setRole(User.Role.FARMER);
+
+    // Email verified, phone verification postponed.
+    user.setEmailVerified(true);
+    user.setPhoneVerified(false);
+
+    // Save permanent user.
+    userRepository.saveAndFlush(user);
+
+    // Delete pending registration only after successful user save.
+    pendingRegistrationRepository.delete(pending);
+
+    return "Email verified successfully. Your account has been created.";
 }
 
 // STEP 3: Authenticate a registered user and generate a JWT.
