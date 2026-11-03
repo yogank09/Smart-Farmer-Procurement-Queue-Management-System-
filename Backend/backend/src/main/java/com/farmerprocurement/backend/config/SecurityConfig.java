@@ -30,8 +30,7 @@ public class SecurityConfig {
             UserDetailsService userDetailsService,
             PasswordEncoder passwordEncoder) {
 
-        DaoAuthenticationProvider provider =
-                new DaoAuthenticationProvider(userDetailsService);
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
 
         provider.setPasswordEncoder(passwordEncoder);
 
@@ -54,53 +53,70 @@ public class SecurityConfig {
             throws Exception {
 
         http
-            .csrf(csrf -> csrf.disable())
+                .csrf(csrf -> csrf.disable())
 
-            .sessionManagement(session -> session
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-            .authenticationProvider(authenticationProvider)
+                .authenticationProvider(authenticationProvider)
 
-            .authorizeHttpRequests(auth -> auth
+                .authorizeHttpRequests(auth -> auth
 
-                // Public authentication APIs
-                .requestMatchers(HttpMethod.POST,
-                    "/api/auth/register",
-                    "/api/auth/verify-email",
-                    "/api/auth/login")
-                .permitAll()
+                        // Public authentication APIs
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/auth/register",
+                                "/api/auth/verify-email",
+                                "/api/auth/login")
+                        .permitAll()
 
-                .requestMatchers("/", "/error")
-                .permitAll()
+                        .requestMatchers("/", "/error")
+                        .permitAll()
 
-                // View and search procurement centers
-                .requestMatchers(HttpMethod.GET, "/api/centers/**")
-                .hasAnyRole("FARMER", "CENTER_OPERATOR", "ADMIN")
+                        // View and search procurement centers
+                        .requestMatchers(HttpMethod.GET, "/api/centers/**")
+                        .hasAnyRole("FARMER", "CENTER_OPERATOR", "ADMIN")
 
-                // Create procurement centers
-                .requestMatchers(HttpMethod.POST, "/api/centers/**")
-                .hasRole("ADMIN")
+                        // Create procurement centers
+                        .requestMatchers(HttpMethod.POST, "/api/centers/**")
+                        .hasRole("ADMIN")
 
-                // Update procurement centers
-                .requestMatchers(HttpMethod.PUT, "/api/centers/**")
-                .hasRole("ADMIN")
+                        // Update procurement centers
+                        .requestMatchers(HttpMethod.PUT, "/api/centers/**")
+                        .hasRole("ADMIN")
 
-                // Activate/deactivate procurement centers
-                .requestMatchers(HttpMethod.PATCH, "/api/centers/**")
-                .hasRole("ADMIN")
+                        // Activate/deactivate procurement centers
+                        .requestMatchers(HttpMethod.PATCH, "/api/centers/**")
+                        .hasRole("ADMIN")
 
-                // All other APIs require authentication
-                .anyRequest()
-                .authenticated()
-            )
+                        // View procurement slots
+                        .requestMatchers(HttpMethod.GET, "/api/slots/**")
+                        .hasAnyRole("FARMER", "CENTER_OPERATOR", "ADMIN")
 
-            .formLogin(form -> form.disable())
-            .httpBasic(basic -> basic.disable())
+                        // Create procurement slots
+                        .requestMatchers(HttpMethod.POST, "/api/slots/**")
+                        .hasRole("ADMIN")
 
-            .addFilterBefore(
-                jwtAuthenticationFilter,
-                UsernamePasswordAuthenticationFilter.class
-            );
+                        // Update procurement slots
+                        .requestMatchers(HttpMethod.PUT, "/api/slots/**")
+                        .hasRole("ADMIN")
+
+                        // Modify procurement slot status
+                        .requestMatchers(HttpMethod.PATCH, "/api/slots/**")
+                        .hasRole("ADMIN")
+
+                        // Delete procurement slots
+                        .requestMatchers(HttpMethod.DELETE, "/api/slots/**")
+                        .hasRole("ADMIN")
+
+                        // All other APIs require authentication
+                        .anyRequest()
+                        .authenticated())
+                .formLogin(form -> form.disable())
+                .httpBasic(basic -> basic.disable())
+
+                .addFilterBefore(
+                        jwtAuthenticationFilter,
+                        UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

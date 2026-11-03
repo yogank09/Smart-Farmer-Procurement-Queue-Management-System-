@@ -26,18 +26,26 @@ public class JwtService {
 
     private SecretKey getSigningKey() {
         return Keys.hmacShaKeyFor(
-                secret.getBytes(StandardCharsets.UTF_8)
-        );
+                secret.getBytes(StandardCharsets.UTF_8));
     }
 
     public String generateToken(UserDetails userDetails) {
-        return generateToken(new HashMap<>(), userDetails);
+
+        Map<String, Object> extraClaims = new HashMap<>();
+
+        extraClaims.put(
+                "roles",
+                userDetails.getAuthorities()
+                        .stream()
+                        .map(authority -> authority.getAuthority())
+                        .toList());
+
+        return generateToken(extraClaims, userDetails);
     }
 
     public String generateToken(
             Map<String, Object> extraClaims,
-            UserDetails userDetails
-    ) {
+            UserDetails userDetails) {
         Date now = new Date();
 
         return Jwts.builder()
@@ -59,8 +67,7 @@ public class JwtService {
 
     public <T> T extractClaim(
             String token,
-            Function<Claims, T> claimsResolver
-    ) {
+            Function<Claims, T> claimsResolver) {
         Claims claims = extractAllClaims(token);
         return claimsResolver.apply(claims);
     }
@@ -75,8 +82,7 @@ public class JwtService {
 
     public boolean isTokenValid(
             String token,
-            UserDetails userDetails
-    ) {
+            UserDetails userDetails) {
         String username = extractUsername(token);
 
         return username.equals(userDetails.getUsername())
