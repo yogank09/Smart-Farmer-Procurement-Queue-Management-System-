@@ -5,8 +5,8 @@ import com.farmerprocurement.backend.security.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -20,104 +20,212 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 public class SecurityConfig {
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
 
-    @Bean
-    public DaoAuthenticationProvider authenticationProvider(
-            UserDetailsService userDetailsService,
-            PasswordEncoder passwordEncoder) {
+private final JwtAuthenticationFilter jwtAuthenticationFilter;
+private final UserDetailsService userDetailsService;
 
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
+public SecurityConfig(
+        JwtAuthenticationFilter jwtAuthenticationFilter,
+        UserDetailsService userDetailsService) {
 
-        provider.setPasswordEncoder(passwordEncoder);
+    this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+    this.userDetailsService = userDetailsService;
+}
 
-        return provider;
-    }
+// Password Encoder
+@Bean
+public PasswordEncoder passwordEncoder() {
+    return new BCryptPasswordEncoder();
+}
 
-    @Bean
-    public AuthenticationManager authenticationManager(
-            AuthenticationConfiguration configuration)
-            throws Exception {
+// Authentication Provider
+@Bean
+public AuthenticationProvider authenticationProvider() {
 
-        return configuration.getAuthenticationManager();
-    }
+    DaoAuthenticationProvider provider =
+            new DaoAuthenticationProvider(userDetailsService);
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(
-            HttpSecurity http,
-            DaoAuthenticationProvider authenticationProvider,
-            JwtAuthenticationFilter jwtAuthenticationFilter)
-            throws Exception {
+    provider.setPasswordEncoder(passwordEncoder());
 
-        http
-                .csrf(csrf -> csrf.disable())
+    return provider;
+}
 
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+// Authentication Manager
+@Bean
+public AuthenticationManager authenticationManager(
+        AuthenticationConfiguration configuration) throws Exception {
 
-                .authenticationProvider(authenticationProvider)
+    return configuration.getAuthenticationManager();
+}
 
-                .authorizeHttpRequests(auth -> auth
+// Security Filter Chain
+@Bean
+public SecurityFilterChain securityFilterChain(
+        HttpSecurity http) throws Exception {
 
-                        // Public authentication APIs
-                        .requestMatchers(HttpMethod.POST,
-                                "/api/auth/register",
-                                "/api/auth/verify-email",
-                                "/api/auth/login")
-                        .permitAll()
+    http
+            .csrf(csrf -> csrf.disable())
 
-                        .requestMatchers("/", "/error")
-                        .permitAll()
+            .sessionManagement(session ->
+                    session.sessionCreationPolicy(
+                            SessionCreationPolicy.STATELESS))
 
-                        // View and search procurement centers
-                        .requestMatchers(HttpMethod.GET, "/api/centers/**")
-                        .hasAnyRole("FARMER", "CENTER_OPERATOR", "ADMIN")
+            .authenticationProvider(authenticationProvider())
 
-                        // Create procurement centers
-                        .requestMatchers(HttpMethod.POST, "/api/centers/**")
-                        .hasRole("ADMIN")
+            .authorizeHttpRequests(auth -> auth
 
-                        // Update procurement centers
-                        .requestMatchers(HttpMethod.PUT, "/api/centers/**")
-                        .hasRole("ADMIN")
+                    // Public Authentication APIs
+                    .requestMatchers(
+                            HttpMethod.POST,
+                            "/api/auth/register",
+                            "/api/auth/verify-email",
+                            "/api/auth/login"
+                    ).permitAll()
 
-                        // Activate/deactivate procurement centers
-                        .requestMatchers(HttpMethod.PATCH, "/api/centers/**")
-                        .hasRole("ADMIN")
+                    // Public URLs
+                    .requestMatchers(
+                            "/",
+                            "/error"
+                    ).permitAll()
 
-                        // View procurement slots
-                        .requestMatchers(HttpMethod.GET, "/api/slots/**")
-                        .hasAnyRole("FARMER", "CENTER_OPERATOR", "ADMIN")
+                    // Centers - GET
+                    .requestMatchers(
+                            HttpMethod.GET,
+                            "/api/centers",
+                            "/api/centers/**"
+                    ).hasAnyRole(
+                            "FARMER",
+                            "CENTER_OPERATOR",
+                            "ADMIN"
+                    )
 
-                        // Create procurement slots
-                        .requestMatchers(HttpMethod.POST, "/api/slots/**")
-                        .hasRole("ADMIN")
+                    // Centers - ADMIN only
+                    .requestMatchers(
+                            "/api/centers/**"
+                    ).hasRole("ADMIN")
 
-                        // Update procurement slots
-                        .requestMatchers(HttpMethod.PUT, "/api/slots/**")
-                        .hasRole("ADMIN")
+                    // Procurement Slots - GET
+                    .requestMatchers(
+                            HttpMethod.GET,
+                            "/api/slots",
+                            "/api/slots/**"
+                    ).hasAnyRole(
+                            "FARMER",
+                            "CENTER_OPERATOR",
+                            "ADMIN"
+                    )
 
-                        // Modify procurement slot status
-                        .requestMatchers(HttpMethod.PATCH, "/api/slots/**")
-                        .hasRole("ADMIN")
+                    // Procurement Slots - ADMIN only
+                    .requestMatchers(
+                            "/api/slots/**"
+                    ).hasRole("ADMIN")
 
-                        // Delete procurement slots
-                        .requestMatchers(HttpMethod.DELETE, "/api/slots/**")
-                        .hasRole("ADMIN")
+                    // Join Queue - FARMER
+                    .requestMatchers(
+                            HttpMethod.POST,
+                            "/api/queue/join"
+                    ).hasRole("FARMER")
 
-                        // All other APIs require authentication
-                        .anyRequest()
-                        .authenticated())
-                .formLogin(form -> form.disable())
-                .httpBasic(basic -> basic.disable())
+                    // Call Next Farmer - CENTER_OPERATOR or ADMIN
+                    .requestMatchers(
+                            HttpMethod.POST,
+                            "/api/queue/call-next"
+                    ).hasAnyRole(
+                            "CENTER_OPERATOR",
+                            "ADMIN"
+                    )
 
-                .addFilterBefore(
-                        jwtAuthenticationFilter,
-                        UsernamePasswordAuthenticationFilter.class);
+                    // Start Processing - CENTER_OPERATOR or ADMIN
+                    .requestMatchers(
+                            HttpMethod.PATCH,
+                            "/api/queue/*/start-processing"
+                    ).hasAnyRole(
+                            "CENTER_OPERATOR",
+                            "ADMIN"
+                    )
 
-        return http.build();
-    }
+                    // Complete Procurement - CENTER_OPERATOR or ADMIN
+                    .requestMatchers(
+                            HttpMethod.PATCH,
+                            "/api/queue/*/complete"
+                    ).hasAnyRole(
+                            "CENTER_OPERATOR",
+                            "ADMIN"
+                    )
+
+                    // Farmer's Own Queue
+                    .requestMatchers(
+                            HttpMethod.GET,
+                            "/api/queue/my-queue"
+                    ).hasRole("FARMER")
+
+                    // Queue By Slot
+                    .requestMatchers(
+                            HttpMethod.GET,
+                            "/api/queue/slot/**"
+                    ).hasAnyRole(
+                            "FARMER",
+                            "CENTER_OPERATOR",
+                            "ADMIN"
+                    )
+
+                    // Other Queue GET APIs
+                    .requestMatchers(
+                            HttpMethod.GET,
+                            "/api/queue/**"
+                    ).hasAnyRole(
+                            "FARMER",
+                            "CENTER_OPERATOR",
+                            "ADMIN"
+                    )
+
+                    // Procurement Management - CREATE
+                    .requestMatchers(
+                            HttpMethod.POST,
+                            "/api/procurements"
+                    ).hasAnyRole(
+                            "CENTER_OPERATOR",
+                            "ADMIN"
+                    )
+
+                    // Procurement Management - GET ALL
+                    .requestMatchers(
+                            HttpMethod.GET,
+                            "/api/procurements"
+                    ).hasAnyRole(
+                            "CENTER_OPERATOR",
+                            "ADMIN"
+                    )
+
+                    // Procurement Management - GET BY STATUS
+                    .requestMatchers(
+                            HttpMethod.GET,
+                            "/api/procurements/status/**"
+                    ).hasAnyRole(
+                            "CENTER_OPERATOR",
+                            "ADMIN"
+                    )
+
+                    // Procurement Management - GET BY ID
+                    .requestMatchers(
+                            HttpMethod.GET,
+                            "/api/procurements/*"
+                    ).hasAnyRole(
+                            "CENTER_OPERATOR",
+                            "ADMIN"
+                    )
+
+                    // All Remaining APIs Require Authentication
+                    .anyRequest().authenticated()
+            )
+
+            // JWT Filter
+            .addFilterBefore(
+                    jwtAuthenticationFilter,
+                    UsernamePasswordAuthenticationFilter.class
+            );
+
+    return http.build();
+}
+
 }
