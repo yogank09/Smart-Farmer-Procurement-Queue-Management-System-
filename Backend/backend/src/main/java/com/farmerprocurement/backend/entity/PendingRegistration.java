@@ -2,6 +2,7 @@ package com.farmerprocurement.backend.entity;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 @Entity
 @Table(
@@ -25,6 +26,9 @@ public class PendingRegistration {
 
     @Column(name = "phone_number", nullable = false, length = 16)
     private String phoneNumber;
+
+    @Column(name = "date_of_birth", nullable = false)
+    private LocalDate dateOfBirth;
 
     // Store a BCrypt password hash, never the original password.
     @Column(nullable = false, length = 100)
@@ -98,6 +102,14 @@ public class PendingRegistration {
 
     public void setPhoneNumber(String phoneNumber) {
         this.phoneNumber = phoneNumber;
+    }
+
+    public LocalDate getDateOfBirth() {
+        return dateOfBirth;
+    }
+
+    public void setDateOfBirth(LocalDate dateOfBirth) {
+        this.dateOfBirth = dateOfBirth;
     }
 
     public String getPasswordHash() {

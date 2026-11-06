@@ -2,8 +2,14 @@ package com.farmerprocurement.backend.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.Past;
+import jakarta.validation.constraints.AssertTrue;
+
+import java.time.LocalDate;
+import java.time.Period;
 
 public class RegisterRequest {
 
@@ -30,6 +36,19 @@ public class RegisterRequest {
         message = "Password must contain between 8 and 72 characters"
     )
     private String password;
+
+    @NotNull(message = "Date of birth is required")
+    @Past(message = "Date of birth must be in the past")
+    private LocalDate dateOfBirth;
+
+    @AssertTrue(message = "You must be at least 18 years old to register")
+    public boolean isAtLeast18() {
+        if (dateOfBirth == null) {
+            return false;
+        }
+
+        return Period.between(dateOfBirth, LocalDate.now()).getYears() >= 18;
+    }
 
     public RegisterRequest() {
     }
@@ -64,5 +83,13 @@ public class RegisterRequest {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public LocalDate getDateOfBirth() {
+        return dateOfBirth;
+    }
+
+    public void setDateOfBirth(LocalDate dateOfBirth) {
+        this.dateOfBirth = dateOfBirth;
     }
 }
