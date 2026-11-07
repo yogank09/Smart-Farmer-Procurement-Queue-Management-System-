@@ -6,6 +6,11 @@ import com.farmerprocurement.backend.security.IpRateLimitFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -16,23 +21,36 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 
+import java.util.List;
 @Configuration
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final IpRateLimitFilter ipRateLimitFilter;
     private final UserDetailsService userDetailsService;
+    private final String frontendOrigin;
+    private final boolean secureCookie;
+    private final String cookieSameSite;
 
     public SecurityConfig(
             JwtAuthenticationFilter jwtAuthenticationFilter,
             IpRateLimitFilter ipRateLimitFilter,
-            UserDetailsService userDetailsService) {
+            UserDetailsService userDetailsService,
+            @Value("${app.frontend-origin:http://localhost:5173}") String frontendOrigin,
+            @Value("${app.auth-cookie-secure:false}") boolean secureCookie,
+            @Value("${app.auth-cookie-same-site:Strict}") String cookieSameSite) {
 
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.ipRateLimitFilter = ipRateLimitFilter;
         this.userDetailsService = userDetailsService;
+        this.frontendOrigin = frontendOrigin;
+        this.secureCookie = secureCookie;
+        this.cookieSameSite = cookieSameSite;
     }
 
     // Password Encoder
@@ -61,19 +79,40 @@ public class SecurityConfig {
         return configuration.getAuthenticationManager();
     }
 
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(List.of(frontendOrigin));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-XSRF-TOKEN"));
+        configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/api/**", configuration);
+        return source;
+    }
+
     // Security Filter Chain
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http) throws Exception {
 
         http
-                .csrf(csrf -> csrf.disable())
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .csrf(csrf -> csrf
+                        .csrfTokenRepository(csrfTokenRepository())
+                        .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
+                        .ignoringRequestMatchers(request ->
+                                request.getHeader("Authorization") != null))
 
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(
                                 SessionCreationPolicy.STATELESS))
 
                 .authenticationProvider(authenticationProvider())
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
 
                 .authorizeHttpRequests(auth -> auth
 
@@ -82,7 +121,13 @@ public class SecurityConfig {
                                 HttpMethod.POST,
                                 "/api/auth/register",
                                 "/api/auth/verify-email",
-                                "/api/auth/login"
+                                "/api/auth/login",
+                                "/api/auth/logout"
+                        ).permitAll()
+
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/auth/csrf"
                         ).permitAll()
 
                         // Public URLs
@@ -280,5 +325,14 @@ public class SecurityConfig {
                 );
 
         return http.build();
+    }
+
+    private CookieCsrfTokenRepository csrfTokenRepository() {
+        CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+        repository.setCookiePath("/");
+        repository.setCookieCustomizer(cookie -> cookie
+                .sameSite(cookieSameSite)
+                .secure(secureCookie));
+        return repository;
     }
 }

@@ -2,6 +2,7 @@ package com.farmerprocurement.backend.service;
 
 import com.farmerprocurement.backend.dto.LoginRequest;
 import com.farmerprocurement.backend.dto.LoginResponse;
+import com.farmerprocurement.backend.dto.AuthSessionResponse;
 import com.farmerprocurement.backend.dto.RegisterRequest;
 import com.farmerprocurement.backend.dto.RegisterResponse;
 
@@ -309,7 +310,9 @@ public class AuthService {
                     user.getId(),
                     user.getFullName(),
                     user.getEmail(),
-                    user.getRole().name());
+                    user.getPhoneNumber(),
+                    user.getRole().name(),
+                    user.getDateOfBirth());
 
         } catch (AuthenticationException exception) {
 
@@ -344,5 +347,22 @@ public class AuthService {
                     HttpStatus.UNAUTHORIZED,
                     "Invalid email or password");
         }
+
+    }
+
+    @Transactional(readOnly = true)
+    public AuthSessionResponse currentSession(String email) {
+        User user = userRepository.findByEmail(email.trim().toLowerCase(Locale.ROOT))
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.UNAUTHORIZED,
+                        "Authenticated user no longer exists"));
+
+        return new AuthSessionResponse(
+                user.getId(),
+                user.getFullName(),
+                user.getEmail(),
+                user.getPhoneNumber(),
+                user.getDateOfBirth(),
+                user.getRole().name());
     }
 }

@@ -1,16 +1,35 @@
-# React + Vite
+# Fieldnote · Smart Farmer Procurement
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Responsive React + Vite frontend for the Smart Farmer Procurement & Queue Management System.
 
-Currently, two official plugins are available:
+## Run locally
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+1. Start the Spring Boot backend on `http://localhost:8080`.
+2. From `FrontEnd/Vite-Project`, install packages and start Vite:
 
-## React Compiler
+   ```sh
+   npm install
+   npm run dev
+   ```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+3. Open the local URL printed by Vite. Requests to `/api` are proxied to the backend.
 
-## Expanding the ESLint configuration
+For a deployed frontend, copy `.env.example` to `.env` and set `VITE_API_BASE_URL` to the public API origin. This value is public configuration, not a place for secrets. The API must use HTTPS in production and allow the deployed frontend origin.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Build and checks
+
+```sh
+npm run lint
+npm run build
+npm run preview
+```
+
+The production build includes an installable PWA. The service worker does not cache navigation pages or API responses; authentication screens and private data therefore remain network-only.
+
+## Authentication and API scope
+
+The backend issues the login JWT in an HttpOnly cookie and provides `/api/auth/session` for safe session restoration. The default cookie policy is `SameSite=Strict`; the frontend does not persist JWTs in browser storage or expose them to JavaScript. Cookie-authenticated write requests use Spring Security CSRF tokens; bearer-header clients remain supported. For production, set `AUTH_COOKIE_SECURE=true` and `FRONTEND_ORIGIN` to the exact HTTPS frontend origin. If frontend and API are on different sites, set `AUTH_COOKIE_SAME_SITE=None` as well as `AUTH_COOKIE_SECURE=true`. The frontend language choice is stored as a non-sensitive preference and supports English and Hindi.
+
+The interface calls only routes currently present in the Spring controllers. Farmer payment and procurement-history screens, notifications, password reset, OTP resend, and some profile fields are clearly marked as unavailable because the current API does not provide the required farmer-scoped operations. Staff analytics are calculated from the actual procurement and payment records returned by the API; no sample records or predicted wait times are generated.
+
+Frontend route and role checks are for navigation only. Spring Security remains the authority for access control.

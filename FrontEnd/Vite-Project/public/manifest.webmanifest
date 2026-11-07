@@ -1,0 +1,17 @@
+{
+  "name": "Smart Farmer Procurement",
+  "short_name": "Farmer Hub",
+  "description": "Manage procurement slots and queue progress.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f8f5",
+  "theme_color": "#166534",
+  "icons": [
+    {
+      "src": "/farm-mark.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
