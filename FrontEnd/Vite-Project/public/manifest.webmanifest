@@ -1,6 +1,6 @@
 {
-  "name": "Smart Farmer Procurement",
-  "short_name": "Farmer Hub",
+  "name": "KisanMitra — Smart Farmer Procurement",
+  "short_name": "KisanMitra",
   "description": "Manage procurement slots and queue progress.",
   "start_url": "/",
   "display": "standalone",

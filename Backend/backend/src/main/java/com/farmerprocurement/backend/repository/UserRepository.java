@@ -18,4 +18,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     // Check whether a phone number is already registered.
     boolean existsByPhoneNumber(String phoneNumber);
+
+    boolean existsByRole(User.Role role);
 }

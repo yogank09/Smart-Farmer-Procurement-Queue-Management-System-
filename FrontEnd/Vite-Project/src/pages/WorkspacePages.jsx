@@ -14,7 +14,7 @@ import { useAuth } from '../context/AuthContext'
 import { LanguageSelector } from '../components/LanguageSelector'
 import i18n from '../i18n'
 import { getErrorMessage } from '../services/api'
-import { getCenters, searchCentersByDistrict } from '../services/centerService'
+import { getCenters, getNearbyCenters, searchCentersByDistrict } from '../services/centerService'
 import { getDashboardSummary } from '../services/dashboardService'
 import { createFarmerProfile, getFarmerProfile, updateFarmerProfile } from '../services/farmerService'
 import { getPayments } from '../services/paymentService'
@@ -309,6 +309,9 @@ function CentersPage() {
   const [district, setDistrict] = useState('')
   const [query, setQuery] = useState('')
   const [notice, setNotice] = useState('')
+  const [locationBusy, setLocationBusy] = useState(false)
+  const [nearbyLocation, setNearbyLocation] = useState('')
+  const [locationAttribution, setLocationAttribution] = useState('')
   const { data: centers, setData: setCenters, loading, error, refresh } = useRemote(getCenters)
   const navigate = useNavigate()
   const filtered = useMemo(() => (centers || []).filter((center) => `${center.centerName} ${center.address} ${center.district} ${center.state}`.toLowerCase().includes(query.toLowerCase())), [centers, query])
@@ -318,14 +321,56 @@ function CentersPage() {
     const value = district.trim()
     try {
       if (!value) {
+        setNearbyLocation('')
+        setLocationAttribution('')
         await refresh()
         return
       }
       setNotice('')
+      setNearbyLocation('')
+      setLocationAttribution('')
       setCenters(await searchCentersByDistrict(value))
     } catch (searchError) {
       setNotice(getErrorMessage(searchError))
     }
+  }
+
+  function searchNearby() {
+    setNotice('')
+    setNearbyLocation('')
+    setLocationAttribution('')
+    if (!navigator.geolocation) {
+      setNotice(t('Location is unavailable in this browser. Search manually by center name, village, or district.'))
+      return
+    }
+
+    setLocationBusy(true)
+    navigator.geolocation.getCurrentPosition(async ({ coords }) => {
+      try {
+        const result = await getNearbyCenters(coords.latitude, coords.longitude)
+        setCenters(result.centers.map(({ center, distanceKm }) => ({
+          ...center,
+          distanceKm,
+        })))
+        setNearbyLocation(result.locationLabel)
+        setLocationAttribution(result.attribution)
+      } catch (locationError) {
+        const status = locationError.response?.status
+        setNotice(status === 429
+          ? t('Location lookup is busy. Please wait a moment or search manually.')
+          : t('We could not look up your location right now. Search manually by center name, village, or district.'))
+      } finally {
+        setLocationBusy(false)
+      }
+    }, (locationError) => {
+      const message = locationError.code === 1
+        ? 'Location permission was denied. Search manually by center name, village, or district.'
+        : locationError.code === 2
+          ? 'Your location is unavailable. Search manually by center name, village, or district.'
+          : 'Location lookup timed out. Search manually by center name, village, or district.'
+      setNotice(t(message))
+      setLocationBusy(false)
+    }, { enableHighAccuracy: false, maximumAge: 0, timeout: 10000 })
   }
 
   return (
@@ -334,8 +379,15 @@ function CentersPage() {
       <section className="surface-card filter-bar">
         <label className="search-control"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t('Search name, village, or district')} aria-label={t('Search centers')} /></label>
         <form className="district-search" onSubmit={searchDistrict}><MapPin size={16} /><input value={district} onChange={(event) => setDistrict(event.target.value)} placeholder={t('Filter by district')} aria-label={t('District')} /><button type="submit">{t('Apply')}</button></form>
+        <div className="location-search">
+          <button className="secondary-button" type="button" onClick={searchNearby} disabled={locationBusy || loading}>
+            <MapPin size={15} /> {locationBusy ? t('Finding nearby centers…') : t('Use my location')}
+          </button>
+          <p>{t('Location is shared with OpenStreetMap Nominatim only after you choose this button. Coverage and availability may vary.')}</p>
+        </div>
       </section>
       {notice && <Notice tone="error">{notice}</Notice>}
+      {nearbyLocation && <Notice tone="info">{t('Nearest centers to {{location}}', { location: nearbyLocation })} · {locationAttribution}</Notice>}
       {loading ? <LoadingPanel /> : error ? <ErrorPanel message={error} retry={refresh} /> : filtered.length ? (
         <div className="center-grid">
           {filtered.map((center, index) => (
@@ -343,12 +395,13 @@ function CentersPage() {
               <div className="center-card-top"><span className="center-symbol"><Leaf size={19} /></span><StatusPill value={center.active ? 'Active' : 'Inactive'} /></div>
               <h2>{center.centerName}</h2>
               <p className="center-address"><MapPin size={15} />{[center.address, center.village, center.district, center.state, center.pincode].filter(Boolean).join(', ') || t('Address not provided')}</p>
+              {Number.isFinite(center.distanceKm) && <p className="center-distance">{t('{{distance}} km away', { distance: center.distanceKm.toFixed(1) })}</p>}
               <div className="center-meta"><span><small>{t('CENTER CODE')}</small><strong>{center.centerCode || '—'}</strong></span><span><small>{t('CONTACT')}</small><strong>{center.contactNumber || t('Not listed')}</strong></span></div>
               <div className="center-actions"><button className="secondary-button" onClick={() => navigate(`/slots?center=${center.id}`)}>{t('View slots')}</button><button className="primary-button compact-button" onClick={() => navigate(`/slots?center=${center.id}`)}>{t('Book slot')} <ArrowRight size={15} /></button></div>
             </motion.article>
           ))}
         </div>
-      ) : <EmptyState icon={MapPin} title="No centers found" text={query || district ? 'Try another center name or district.' : 'There are no active centers available from the service right now.'} action={(query || district) && <button className="text-link" onClick={() => { setQuery(''); setDistrict(''); refresh() }}>{t('Clear filters')}</button>} />}
+      ) : <EmptyState icon={MapPin} title="No centers found" text={nearbyLocation ? 'No centers with saved coordinates were found for this location. Search manually by center name, village, or district.' : query || district ? 'Try another center name or district.' : 'There are no active centers available from the service right now.'} action={(query || district || nearbyLocation) && <button className="text-link" onClick={() => { setQuery(''); setDistrict(''); setNearbyLocation(''); setLocationAttribution(''); refresh() }}>{t('Clear filters')}</button>} />}
     </>
   )
 }

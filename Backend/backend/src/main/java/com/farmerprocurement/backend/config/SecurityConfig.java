@@ -281,6 +281,12 @@ public class SecurityConfig {
                                 "ADMIN"
                         )
 
+                        // Farmers can access only the history scoped to their authenticated account.
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/payments/my-history"
+                        ).hasRole("FARMER")
+
                         // Payment Management - GET ALL
                         .requestMatchers(
                                 HttpMethod.GET,

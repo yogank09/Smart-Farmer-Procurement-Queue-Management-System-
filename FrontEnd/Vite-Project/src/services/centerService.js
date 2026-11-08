@@ -10,6 +10,13 @@ export async function searchCentersByDistrict(district) {
   return data
 }
 
+export async function getNearbyCenters(latitude, longitude) {
+  const { data } = await api.get('/api/centers/nearby', {
+    params: { latitude, longitude },
+  })
+  return data
+}
+
 export async function getCenter(id) {
   const { data } = await api.get(`/api/centers/${id}`)
   return data

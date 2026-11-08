@@ -115,7 +115,7 @@ export function AppShell() {
       <aside className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`} aria-label={t('Main navigation')}>
         <div className="sidebar-brand">
           <span className="brand-mark"><Leaf size={19} /></span>
-          <span>fieldnote<span className="brand-period">.</span></span>
+          <span>KisanMitra<span className="brand-period">.</span></span>
           <button className="icon-button mobile-close" onClick={() => setSidebarOpen(false)} aria-label={t('Close menu')}><X size={19} /></button>
         </div>
         <div className="workspace-switcher">
@@ -165,7 +165,7 @@ export function AppShell() {
           {logoutError && <div className="notice notice-error" role="alert">{t(logoutError)}</div>}
           <Outlet />
         </main>
-        <footer className="workspace-footer"><span>Fieldnote · {t('Procurement, made simpler')}</span><span>{t('Your session is securely verified when you return.')}</span></footer>
+        <footer className="workspace-footer"><span>KisanMitra · {t('Procurement, made simpler')}</span><span>{t('Your session is securely verified when you return.')}</span></footer>
       </div>
     </div>
   )

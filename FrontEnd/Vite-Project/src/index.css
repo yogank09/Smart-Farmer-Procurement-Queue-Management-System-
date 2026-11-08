@@ -247,6 +247,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .search-control input::placeholder, .district-search input::placeholder { color: var(--text-soft); }
 .district-search { width: min(100%, 290px); }
 .district-search button { min-height: 29px; padding: 0 9px; border: 0; border-radius: 6px; color: var(--green); background: var(--green-tint); font-size: 9px; font-weight: 650; cursor: pointer; }
+.location-search { display: flex; flex: 1 1 250px; align-items: flex-start; flex-direction: column; gap: 5px; }
+.location-search p { max-width: 290px; margin: 0; color: var(--text-secondary); font-size: 9px; line-height: 1.45; }
+.location-search .secondary-button:disabled { opacity: .65; cursor: wait; }
+.center-distance { margin: -7px 0 0; color: var(--green); font-size: 10px; font-weight: 650; }
 .center-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 13px; }
 .center-card { display: flex; min-height: 250px; flex-direction: column; padding: 17px; }
 .center-card-top { display: flex; align-items: center; justify-content: space-between; }

@@ -3,6 +3,8 @@ package com.farmerprocurement.backend.dto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 
 public class ProcurementCenterRequest {
 
@@ -33,6 +35,14 @@ public class ProcurementCenterRequest {
     @Pattern(regexp = "^$|^\\+[1-9][0-9]{7,14}$",
             message = "Contact number must be in international format")
     private String contactNumber;
+
+    @DecimalMin(value = "-90.0")
+    @DecimalMax(value = "90.0")
+    private Double latitude;
+
+    @DecimalMin(value = "-180.0")
+    @DecimalMax(value = "180.0")
+    private Double longitude;
 
     public String getCenterName() {
         return centerName;
@@ -96,5 +106,21 @@ public class ProcurementCenterRequest {
 
     public void setContactNumber(String contactNumber) {
         this.contactNumber = contactNumber;
+    }
+
+    public Double getLatitude() {
+        return latitude;
+    }
+
+    public void setLatitude(Double latitude) {
+        this.latitude = latitude;
+    }
+
+    public Double getLongitude() {
+        return longitude;
+    }
+
+    public void setLongitude(Double longitude) {
+        this.longitude = longitude;
     }
 }

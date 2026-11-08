@@ -51,7 +51,7 @@ function AuthFrame({ children, eyebrow, title, description, backLink }) {
   return (
     <main className="auth-page">
       <div className="auth-visual" aria-hidden="true">
-        <div className="auth-visual-top"><BrandMark /><span>Fieldnote</span></div>
+        <div className="auth-visual-top"><BrandMark /><span>KisanMitra</span></div>
         <div className="auth-visual-copy">
           <span className="eyebrow light-eyebrow">{t('PROCUREMENT, MADE SIMPLE')}</span>
           <h1>{t('Good work')}<br />{t('grows together.')}</h1>
@@ -61,7 +61,7 @@ function AuthFrame({ children, eyebrow, title, description, backLink }) {
         <div className="visual-footnote"><span className="live-dot" /> {t('A clearer view of your harvest journey')}</div>
       </div>
       <section className="auth-panel">
-        <div className="auth-mobile-brand"><BrandMark /><span>Fieldnote</span></div>
+        <div className="auth-mobile-brand"><BrandMark /><span>KisanMitra</span></div>
         <div className="auth-content">
           <div className="auth-tools"><LanguageSelector compact />{backLink && <Link className="back-link" to={backLink}><ArrowLeft size={16} /> {t('Back')}</Link>}</div>
           <span className="eyebrow">{t(eyebrow)}</span>
@@ -70,7 +70,7 @@ function AuthFrame({ children, eyebrow, title, description, backLink }) {
           {children}
           <p className="auth-security"><ShieldCheck size={15} /> {t('Your account details are protected.')}</p>
         </div>
-        <p className="auth-copyright">© {new Date().getFullYear()} Fieldnote · {t('Made for the people who grow our food')}</p>
+        <p className="auth-copyright">© {new Date().getFullYear()} KisanMitra · {t('Made for the people who grow our food')}</p>
       </section>
     </main>
   )
@@ -134,7 +134,7 @@ export function LoginPage() {
         <button className="primary-button auth-submit" type="submit" disabled={isSubmitting}>
           {isSubmitting ? t('Signing in…') : t('Sign in')} {!isSubmitting && <ArrowRight size={17} />}
         </button>
-        <p className="auth-switch">{t('New to Fieldnote?')} <Link to="/register">{t('Create an account')}</Link></p>
+        <p className="auth-switch">{t('New to KisanMitra?')} <Link to="/register">{t('Create an account')}</Link></p>
       </form>
     </AuthFrame>
   )
