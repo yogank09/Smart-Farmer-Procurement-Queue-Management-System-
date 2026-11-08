@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Executable tasks for the evidence-based KisanMitra implementation plan.",
+  "tasks": [
+    {
+      "type": "transform",
+      "id": "001-worktree-and-feature-inventory",
+      "description": "Record the existing worktree baseline and source-backed feature scope before implementation.",
+      "reason": "The repository has pre-existing user edits and multiple role-sensitive features whose actual support must be verified before choosing code changes.",
+      "requirements": "Recheck git status and preserve all pre-existing edits. Produce a source-anchored inventory of frontend routes, role presentation, backend endpoints and authorization, entities/relationships, localization, tests, and configured integrations. Audit Admin, center/location, profile, dashboard, booking, queue, procurement/history, payments, and notifications; label each implemented, partial, unavailable, or out of scope. Identify the selected farmer payment-history slice and record unsupported scope without claiming completion.",
+      "dependencies": [],
+      "successCriteria": {
+        "passBuild": "true",
+        "generateNewUnitTests": "false",
+        "passUnitTests": "true"
+      }
+    },
+    {
+      "type": "transform",
+      "id": "002-farmer-payment-history-slice",
+      "description": "Enable farmers to view their own payment history through the existing payments experience.",
+      "reason": "The current farmer payments page is an integration placeholder, while the existing general payment list is restricted to center operators and administrators.",
+      "requirements": "Implement one coherent frontend, Spring Boot, and MySQL-backed slice for farmer-owned payment history. Derive ownership from the authenticated identity and existing Payment-to-Procurement-to-Token-to-Farmer-to-User relationship; never accept a farmer/user ID as authorization input. Preserve operator/admin payment behavior and API contracts unless source-backed tests require a compatible change. Reuse existing schema where possible and make no destructive database changes. Add regression tests for own-record visibility, cross-farmer isolation, unauthenticated/unauthorized access, and existing operator/admin behavior. Localize new or changed visible strings in English and Hindi; preserve unrelated pre-existing locale edits.",
+      "dependencies": [
+        "001-worktree-and-feature-inventory"
+      ],
+      "successCriteria": {
+        "passBuild": "true",
+        "generateNewUnitTests": "true",
+        "passUnitTests": "true"
+      }
+    },
+    {
+      "type": "transform",
+      "id": "003-admin-bootstrap-and-location-fallback",
+      "description": "Handle admin provisioning and reverse geocoding only under safe, explicit configuration.",
+      "reason": "The ADMIN role exists, but no provisioning workflow or reverse-geocoding provider/configuration was found.",
+      "requirements": "Do not hardcode passwords, create seed credentials, or invent users/data. Add a documented one-time environment/bootstrap flow only if its secret lifecycle and one-time behavior can be enforced safely; otherwise leave bootstrap disabled and document the secure operational prerequisite. Do not integrate or call a reverse-geocoding service unless an explicit provider is configured. Without one, report the feature as unavailable and do not fabricate coordinates. Preserve existing behavior and database contents; no schema change is expected.",
+      "dependencies": [
+        "002-farmer-payment-history-slice"
+      ],
+      "successCriteria": {
+        "passBuild": "true",
+        "generateNewUnitTests": "false",
+        "passUnitTests": "true"
+      }
+    },
+    {
+      "type": "security",
+      "id": "004-verify-role-and-data-isolation",
+      "description": "Verify backend role enforcement and regression coverage for the scoped data-isolation change.",
+      "reason": "Frontend role presentation alone cannot enforce access, and the plan prioritizes protecting farmer-owned records without guessing center-assignment semantics.",
+      "requirements": "Verify the farmer payment-history endpoint enforces authenticated owner scope at the backend and that operator/admin paths retain intended behavior. Review other existing role and location-based access boundaries found in the inventory; fix only directly evidenced defects that can be resolved without inventing account-to-center policy. If center-wide isolation requires a new assignment model or other material business rule, do not implement guessed semantics—record the gap and request clarification. Add or update focused security regression tests and report unresolved risks distinctly from fixed findings.",
+      "dependencies": [
+        "003-admin-bootstrap-and-location-fallback"
+      ],
+      "successCriteria": {
+        "passBuild": "true",
+        "generateNewUnitTests": "true",
+        "passUnitTests": "true"
+      }
+    },
+    {
+      "type": "transform",
+      "id": "005-run-and-report-validation",
+      "description": "Run requested frontend and backend validation and report exact outcomes and remaining scope.",
+      "reason": "The user requires real, clearly classified validation results and a precise implementation handoff.",
+      "requirements": "Run `npm run lint` and `npm run build` in `FrontEnd/Vite-Project`; run Maven tests and build/package from `Backend/backend` when feasible. Do not invent credentials or modify production data to make a check pass. Record the exact command and PASS or BLOCKED result for every check, including the concrete blocker. Report changed files, API changes, schema changes (including none), required deployment/configuration, feature-status inventory, and remaining unsupported work. Preserve all unrelated pre-existing worktree edits.",
+      "dependencies": [
+        "004-verify-role-and-data-isolation"
+      ],
+      "successCriteria": {
+        "passBuild": "true",
+        "generateNewUnitTests": "false",
+        "passUnitTests": "true"
+      }
+    }
+  ],
+  "metadata": {
+    "planName": "kisanmitra-implementation",
+    "projectName": "Smart Farmer Procurement Queue Management System",
+    "language": "java",
+    "createdAt": "2026-11-08T21:53:41+05:30",
+    "version": "1.0"
+  }
+}

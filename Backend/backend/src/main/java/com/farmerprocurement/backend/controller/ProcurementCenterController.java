@@ -2,6 +2,8 @@ package com.farmerprocurement.backend.controller;
 
 import com.farmerprocurement.backend.dto.ProcurementCenterRequest;
 import com.farmerprocurement.backend.dto.ProcurementCenterResponse;
+import com.farmerprocurement.backend.dto.NearbyCentersResponse;
+import com.farmerprocurement.backend.service.NearbyCenterService;
 import com.farmerprocurement.backend.service.ProcurementCenterService;
 
 import jakarta.validation.Valid;
@@ -16,10 +18,13 @@ import java.util.List;
 public class ProcurementCenterController {
 
     private final ProcurementCenterService centerService;
+    private final NearbyCenterService nearbyCenterService;
 
     public ProcurementCenterController(
-            ProcurementCenterService centerService) {
+            ProcurementCenterService centerService,
+            NearbyCenterService nearbyCenterService) {
         this.centerService = centerService;
+        this.nearbyCenterService = nearbyCenterService;
     }
 
     // Create a procurement center
@@ -35,6 +40,13 @@ public class ProcurementCenterController {
     @GetMapping
     public List<ProcurementCenterResponse> getAllCenters() {
         return centerService.getAllCenters();
+    }
+
+    @GetMapping("/nearby")
+    public NearbyCentersResponse getNearbyCenters(
+            @RequestParam double latitude,
+            @RequestParam double longitude) {
+        return nearbyCenterService.findNearby(latitude, longitude);
     }
 
     // Get center by ID

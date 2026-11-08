@@ -9,6 +9,8 @@ import jakarta.validation.Valid;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -36,6 +38,12 @@ public class PaymentController {
     public ResponseEntity<List<PaymentResponse>> getAllPayments() {
 
         return ResponseEntity.ok(paymentService.getAllPayments());
+    }
+
+    @GetMapping("/my-history")
+    public ResponseEntity<List<PaymentResponse>> getMyPayments(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(paymentService.getMyPayments(userDetails));
     }
 
     @GetMapping("/{paymentId}")

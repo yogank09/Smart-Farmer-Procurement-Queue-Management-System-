@@ -37,6 +37,7 @@ public class ProcurementCenterService {
 
         ProcurementCenter center = new ProcurementCenter();
 
+        validateCoordinates(request);
         mapRequestToEntity(request, center);
         center.setCenterCode(centerCode);
         center.setActive(true);
@@ -91,6 +92,7 @@ public class ProcurementCenterService {
             );
         }
 
+        validateCoordinates(request);
         mapRequestToEntity(request, center);
         center.setCenterCode(centerCode);
 
@@ -159,6 +161,10 @@ public class ProcurementCenterService {
         center.setState(request.getState().trim());
         center.setPincode(request.getPincode());
         center.setContactNumber(request.getContactNumber());
+        if (request.getLatitude() != null && request.getLongitude() != null) {
+            center.setLatitude(request.getLatitude());
+            center.setLongitude(request.getLongitude());
+        }
     }
 
     // Map entity to response DTO
@@ -177,9 +183,24 @@ public class ProcurementCenterService {
         response.setState(center.getState());
         response.setPincode(center.getPincode());
         response.setContactNumber(center.getContactNumber());
+        response.setLatitude(center.getLatitude());
+        response.setLongitude(center.getLongitude());
         response.setActive(center.isActive());
         response.setCreatedAt(center.getCreatedAt());
 
         return response;
+    }
+
+    private void validateCoordinates(ProcurementCenterRequest request) {
+        Double latitude = request.getLatitude();
+        Double longitude = request.getLongitude();
+        if ((latitude == null) != (longitude == null)
+                || (latitude != null && (!Double.isFinite(latitude) || latitude < -90 || latitude > 90))
+                || (longitude != null && (!Double.isFinite(longitude) || longitude < -180 || longitude > 180))) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Provide both valid center coordinates or omit both"
+            );
+        }
     }
 }

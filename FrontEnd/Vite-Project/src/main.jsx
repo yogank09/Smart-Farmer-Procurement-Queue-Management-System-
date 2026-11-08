@@ -6,7 +6,7 @@ import App from './App.jsx'
 
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').catch((error) => {
-    console.error('Unable to register the Fieldnote service worker.', error)
+    console.error('Unable to register the KisanMitra service worker.', error)
   })
 }
 

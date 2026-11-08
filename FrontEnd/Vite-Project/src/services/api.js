@@ -53,17 +53,28 @@ api.interceptors.response.use(
     }
     return response
   },
-  (error) => {
-    const url = error.config?.url || ''
-    if (error.response?.status === 401 && !url.endsWith('/api/auth/login')) unauthorizedHandler()
+  async (error) => {
+    const config = error.config
+    const url = config?.url || ''
+    const isLoginRequest = url.endsWith('/api/auth/login')
+
+    if (error.response?.status === 403 && isLoginRequest && config && !config._csrfRetry) {
+      config._csrfRetry = true
+      config.headers['X-XSRF-TOKEN'] = await getCsrfToken(true)
+      return api.request(config)
+    }
+
+    if (error.response?.status === 401 && !isLoginRequest) unauthorizedHandler()
     return Promise.reject(error)
   },
 )
 
 export function getErrorMessage(error) {
   const status = error.response?.status
+  const url = error.config?.url || ''
   if (!error.response) return 'We could not reach the server. Check your connection and try again.'
   if (status === 401) return 'We could not verify your sign-in. Check your credentials or sign in again.'
+  if (status === 403 && url.endsWith('/api/auth/login')) return 'We could not verify the sign-in request. Refresh the page and try again.'
   if (status === 403) return 'You do not have permission to access this information.'
   if (status === 410) return 'This verification code or registration has expired. Please register again to request a new code.'
   if (status === 423) return 'Your account is temporarily locked after too many sign-in attempts. Please try again later.'

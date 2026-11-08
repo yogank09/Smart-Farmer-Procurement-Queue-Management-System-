@@ -13,6 +13,8 @@ public class ProcurementCenterResponse {
     private String state;
     private String pincode;
     private String contactNumber;
+    private Double latitude;
+    private Double longitude;
     private boolean active;
     private LocalDateTime createdAt;
 
@@ -85,6 +87,22 @@ public class ProcurementCenterResponse {
 
     public void setContactNumber(String contactNumber) {
         this.contactNumber = contactNumber;
+    }
+
+    public Double getLatitude() {
+        return latitude;
+    }
+
+    public void setLatitude(Double latitude) {
+        this.latitude = latitude;
+    }
+
+    public Double getLongitude() {
+        return longitude;
+    }
+
+    public void setLongitude(Double longitude) {
+        this.longitude = longitude;
     }
 
     public boolean isActive() {

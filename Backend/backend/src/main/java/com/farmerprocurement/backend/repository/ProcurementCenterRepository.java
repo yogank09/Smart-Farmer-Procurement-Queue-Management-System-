@@ -18,4 +18,6 @@ public interface ProcurementCenterRepository
     List<ProcurementCenter> findByStateIgnoreCaseAndActiveTrue(String state);
 
     List<ProcurementCenter> findByActiveTrue();
+
+    List<ProcurementCenter> findByActiveTrueAndLatitudeIsNotNullAndLongitudeIsNotNull();
 }
